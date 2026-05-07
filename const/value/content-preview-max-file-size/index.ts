@@ -1,0 +1,1 @@
+export const CONTENT_PREVIEW_MAX_FILE_SIZE = 120_000;
