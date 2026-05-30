@@ -1,22 +1,58 @@
-import { appendFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { normalizeText } from '$stylist/typography/function/script/text-normatize';
-import { truncateText } from '$stylist/typography/function/script/text-truncate';
-import { ERROR_LOG_FILE } from '$stylist/server/const/value/error-log-file';
-import type { ErrorLogEntry } from '$stylist/development/type/struct/error-log-entry';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { ErrorLogEntry, ErrorLogPayload } from '$stylist/development/type/struct';
+import { getErrorLogFilePath } from '$stylist/server/function/script/get-error-log-file-path';
 
-export function appendErrorLog(entry: ErrorLogEntry): void {
-	mkdirSync(dirname(ERROR_LOG_FILE), { recursive: true });
-
-	const normalizedEntry: ErrorLogEntry = {
-		...entry,
-		message: normalizeText(entry.message, 'Unknown runtime error'),
-		stack: truncateText(entry.stack, 12000),
-		name: truncateText(entry.name, 512),
-		url: truncateText(entry.url, 2048),
-		method: truncateText(entry.method, 32),
-		routeId: truncateText(entry.routeId, 512)
+export function appendErrorLog(payload: {
+	timestamp: string;
+	source: ErrorLogEntry['source'];
+	routeId: string | null;
+	url: string;
+	method: string;
+	message: string;
+	stack: string | null;
+	name: string | null;
+	status: number;
+	details: ErrorLogPayload['details'];
+}): void {
+	const entry: ErrorLogEntry = {
+		timestamp: payload.timestamp,
+		source: payload.source,
+		routeId: payload.routeId,
+		url: payload.url,
+		method: payload.method,
+		message: payload.message,
+		stack: payload.stack,
+		name: payload.name,
+		status: payload.status,
+		details:
+			payload.details && typeof payload.details === 'object'
+				? (payload.details as Record<string, unknown>)
+				: {}
 	};
 
-	appendFileSync(ERROR_LOG_FILE, `${JSON.stringify(normalizedEntry)}\n`, 'utf-8');
+	try {
+		const logFilePath = getErrorLogFilePath();
+		fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+		fs.appendFileSync(logFilePath, `${JSON.stringify(entry)}\n`, 'utf8');
+	} catch (error) {
+		const fallbackLogFilePath = path.resolve(process.cwd(), '.logs', 'runtime-errors.jsonl');
+		const fallbackEntry = {
+			...entry,
+			details: {
+				...entry.details,
+				logWriteFailure:
+					error instanceof Error
+						? { message: error.message, stack: error.stack ?? null }
+						: { message: String(error), stack: null }
+			}
+		};
+
+		try {
+			fs.mkdirSync(path.dirname(fallbackLogFilePath), { recursive: true });
+			fs.appendFileSync(fallbackLogFilePath, `${JSON.stringify(fallbackEntry)}\n`, 'utf8');
+		} catch (fallbackError) {
+			console.error('appendErrorLog failed', fallbackEntry, fallbackError);
+		}
+	}
 }

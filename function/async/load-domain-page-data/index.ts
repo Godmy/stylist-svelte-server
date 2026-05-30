@@ -1,140 +1,199 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadDomainComponentDescriptors } from '$stylist/server/function/async/load-domain-component-descriptors';
 import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-path';
+import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/struct/domain-component-descriptor';
 
-export async function loadDomainPageData() {
-	const DATA_JOINT_EXTENSION = new Map([
-		['svg', '.svg'],
-		['json', '.json'],
-		['md', '.md'],
-		['yaml', '.yaml'],
-		['vert', '.vert'],
-		['frag', '.frag']
-	]);
+export function loadDomainPageData(): {
+	tree: Array<{
+		name: string;
+		clusters: Array<{
+			name: string;
+			joints: Array<{
+				name: string;
+				entities: Array<{
+					name: string;
+					path: string;
+					files: Array<{
+						name: string;
+						path: string;
+					}>;
+				}>;
+			}>;
+		}>;
+	}>;
+	descriptors: TypeDomainComponentDescriptor[];
+} {
+	type DomainFile = {
+		name: string;
+		path: string;
+	};
 
-	function toRelativeLibPath(filePath: string): string {
-		return path.relative(LIB_DIRECTORY_PATH, filePath).split(path.sep).join('/');
-	}
+	type DomainEntity = {
+		name: string;
+		path: string;
+		files: DomainFile[];
+	};
 
-	function getDirectories(directoryPath: string): string[] {
-		if (!fs.existsSync(directoryPath)) return [];
+	type DomainJoint = {
+		name: string;
+		entities: DomainEntity[];
+	};
 
-		return fs
-			.readdirSync(directoryPath, { withFileTypes: true })
+	type DomainCluster = {
+		name: string;
+		joints: DomainJoint[];
+	};
+
+	type DomainTreeNode = {
+		name: string;
+		clusters: DomainCluster[];
+	};
+
+	function buildDomainNode(domainName: string): DomainTreeNode | null {
+		const domainPath = path.join(LIB_DIRECTORY_PATH, domainName);
+		const clusterNames = fs
+			.readdirSync(domainPath, { withFileTypes: true })
 			.filter((entry) => entry.isDirectory())
 			.map((entry) => entry.name)
-			.sort((a, b) => a.localeCompare(b));
+			.filter((name) => !name.startsWith('.'));
+
+		const clusters = clusterNames
+			.map((clusterName) => buildClusterNode(domainName, clusterName))
+			.filter((node): node is DomainCluster => node !== null);
+
+		if (clusters.length === 0) {
+			return null;
+		}
+
+		return { name: domainName, clusters };
 	}
 
-	function getFiles(directoryPath: string) {
-		if (!fs.existsSync(directoryPath)) return [];
+	function buildClusterNode(domainName: string, clusterName: string): DomainCluster | null {
+		const clusterPath = path.join(LIB_DIRECTORY_PATH, domainName, clusterName);
+		const jointNames = fs
+			.readdirSync(clusterPath, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
 
-		return fs
-			.readdirSync(directoryPath, { withFileTypes: true })
-			.filter((entry) => entry.isFile())
-			.map((entry) => ({
-				name: entry.name,
-				path: toRelativeLibPath(path.join(directoryPath, entry.name))
-			}))
-			.sort((a, b) => a.name.localeCompare(b.name));
+		const joints = jointNames
+			.map((jointName) => buildJointNode(domainName, clusterName, jointName))
+			.filter((node): node is DomainJoint => node !== null);
+
+		if (joints.length === 0) {
+			return null;
+		}
+
+		return { name: clusterName, joints };
 	}
 
-	function getFilesRecursive(directoryPath: string, extension: string) {
-		if (!fs.existsSync(directoryPath)) return [];
+	function buildJointNode(
+		domainName: string,
+		clusterName: string,
+		jointName: string
+	): DomainJoint | null {
+		const jointPath = path.join(LIB_DIRECTORY_PATH, domainName, clusterName, jointName);
+		const entities = collectEntities(domainName, clusterName, jointName, jointPath);
 
-		const files: Array<{ name: string; path: string }> = [];
-		const entries = fs.readdirSync(directoryPath, { withFileTypes: true });
+		if (entities.length === 0) {
+			return null;
+		}
 
-		for (const entry of entries) {
-			const entryPath = path.join(directoryPath, entry.name);
+		return { name: jointName, entities };
+	}
 
-			if (entry.isDirectory()) {
-				files.push(...getFilesRecursive(entryPath, extension));
+	function collectEntities(
+		domainName: string,
+		clusterName: string,
+		jointName: string,
+		jointPath: string
+	): DomainEntity[] {
+		const entities: DomainEntity[] = [];
+
+		for (const entry of fs.readdirSync(jointPath, { withFileTypes: true })) {
+			if (!entry.isDirectory()) {
 				continue;
 			}
 
-			if (entry.isFile() && entry.name.endsWith(extension)) {
-				files.push({
+			const entityPath = path.join(jointPath, entry.name);
+			const files = collectEntityFiles(entityPath);
+
+			if (files.length > 0) {
+				entities.push({
 					name: entry.name,
-					path: toRelativeLibPath(entryPath)
+					path: `${domainName}/${clusterName}/${jointName}/${entry.name}`,
+					files
 				});
+				continue;
+			}
+
+			for (const nestedEntity of collectNestedEntities(
+				domainName,
+				clusterName,
+				jointName,
+				entry.name,
+				entityPath
+			)) {
+				entities.push(nestedEntity);
 			}
 		}
 
-		return files.sort((a, b) => a.path.localeCompare(b.path));
+		return entities.sort((left, right) => left.name.localeCompare(right.name));
 	}
 
-	function stripExtensions(filename: string): string {
-		return filename.replace(/(\.[^/.]+)+$/, '');
-	}
+	function collectNestedEntities(
+		domainName: string,
+		clusterName: string,
+		jointName: string,
+		parentName: string,
+		parentPath: string
+	): DomainEntity[] {
+		const entities: DomainEntity[] = [];
 
-	function getEntities(jointPath: string, jointName: string) {
-		const dataExtension = DATA_JOINT_EXTENSION.get(jointName);
+		for (const entry of fs.readdirSync(parentPath, { withFileTypes: true })) {
+			if (!entry.isDirectory()) {
+				continue;
+			}
 
-		if (dataExtension) {
-			return getFilesRecursive(jointPath, dataExtension).map((file) => {
-				const segments = file.path.split('/').slice(3);
-				const familyParts = segments.slice(0, -1);
-				const name = familyParts.length > 0
-					? familyParts.join('/')
-					: stripExtensions(segments[segments.length - 1]);
-				return { name, path: file.path, files: [file] };
+			const entityPath = path.join(parentPath, entry.name);
+			const files = collectEntityFiles(entityPath);
+
+			if (files.length === 0) {
+				continue;
+			}
+
+			entities.push({
+				name: `${parentName}/${entry.name}`,
+				path: `${domainName}/${clusterName}/${jointName}/${parentName}/${entry.name}`,
+				files
 			});
 		}
 
-		const directories = getDirectories(jointPath);
-
-		if (directories.length > 0) {
-			return directories.map((entityName) => {
-				const entityPath = path.join(jointPath, entityName);
-				return {
-					name: entityName,
-					path: toRelativeLibPath(entityPath),
-					files: getFiles(entityPath)
-				};
-			});
-		}
-
-		const files = getFiles(jointPath);
-		if (files.length === 0) return [];
-
-		const grouped = new Map<string, typeof files>();
-		for (const file of files) {
-			const base = stripExtensions(file.name);
-			const key = base === 'index' ? jointName : base;
-			if (!grouped.has(key)) grouped.set(key, []);
-			grouped.get(key)!.push(file);
-		}
-
-		return Array.from(grouped.entries()).map(([name, entityFiles]) => ({
-			name,
-			path: entityFiles.length === 1 ? entityFiles[0].path : toRelativeLibPath(jointPath),
-			files: entityFiles
-		}));
+		return entities.sort((left, right) => left.name.localeCompare(right.name));
 	}
+
+	function collectEntityFiles(entityPath: string): DomainFile[] {
+		return fs
+			.readdirSync(entityPath, { withFileTypes: true })
+			.filter((entry) => entry.isFile())
+			.map((entry) => ({
+				name: entry.name,
+				path: path
+					.relative(LIB_DIRECTORY_PATH, path.join(entityPath, entry.name))
+					.replace(/\\/g, '/')
+			}))
+			.sort((left, right) => left.name.localeCompare(right.name));
+	}
+
+	const tree = fs
+		.readdirSync(LIB_DIRECTORY_PATH, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((domainEntry) => buildDomainNode(domainEntry.name))
+		.filter((node): node is DomainTreeNode => node !== null)
+		.sort((left, right) => left.name.localeCompare(right.name));
 
 	return {
-		tree: getDirectories(LIB_DIRECTORY_PATH).map((domainName) => {
-			const domainPath = path.join(LIB_DIRECTORY_PATH, domainName);
-
-			return {
-				name: domainName,
-				clusters: getDirectories(domainPath).map((clusterName) => {
-					const clusterPath = path.join(domainPath, clusterName);
-
-					return {
-						name: clusterName,
-						joints: getDirectories(clusterPath).map((jointName) => {
-							const jointPath = path.join(clusterPath, jointName);
-
-							return {
-								name: jointName,
-								entities: getEntities(jointPath, jointName)
-							};
-						})
-					};
-				})
-			};
-		})
+		tree,
+		descriptors: loadDomainComponentDescriptors()
 	};
 }

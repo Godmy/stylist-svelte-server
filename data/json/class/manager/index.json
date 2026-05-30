@@ -1,0 +1,68 @@
+{
+  "domainName": "server",
+  "sourceDirectory": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager",
+  "outputFile": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\data\\json\\class\\manager\\index.json",
+  "tokens": [
+    {
+      "className": "ClassScanner",
+      "methods": [
+        "constructor",
+        "getDomainsWithJoint",
+        "scanFiles",
+        "findClasses",
+        "getBodyPos",
+        "extractPublicMethods"
+      ],
+      "absolutePath": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager\\class-scanner\\index.ts",
+      "relativePath": "class-scanner\\index.ts"
+    },
+    {
+      "className": "ConstScanner",
+      "methods": [],
+      "absolutePath": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager\\const-scanner\\index.ts",
+      "relativePath": "const-scanner\\index.ts"
+    },
+    {
+      "className": "FunctionScanner",
+      "methods": [
+        "constructor",
+        "getDomainsWithJoint",
+        "scanStateFiles",
+        "scanScriptFiles",
+        "findFunctions",
+        "extractFunctionParams",
+        "extractReturnMembers"
+      ],
+      "absolutePath": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager\\function-scanner\\index.ts",
+      "relativePath": "function-scanner\\index.ts"
+    },
+    {
+      "className": "InterfaceScanner",
+      "methods": [
+        "constructor",
+        "getDomainsWithJoint",
+        "scanFiles",
+        "findInterfaces",
+        "getBodyPos",
+        "extractKeys",
+        "extractEntries"
+      ],
+      "absolutePath": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager\\interface-scanner\\index.ts",
+      "relativePath": "interface-scanner\\index.ts"
+    },
+    {
+      "className": "TypeScanner",
+      "methods": [
+        "constructor",
+        "getDomainsWithJoint",
+        "scanFiles",
+        "findTypeAliases",
+        "findInterfaces",
+        "getTypeBodyPos",
+        "extractTypeKeys"
+      ],
+      "absolutePath": "D:\\2026\\code\\template\\stylist-svelte\\src\\lib\\server\\class\\manager\\type-scanner\\index.ts",
+      "relativePath": "type-scanner\\index.ts"
+    }
+  ]
+}
