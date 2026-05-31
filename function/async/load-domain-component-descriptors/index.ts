@@ -114,21 +114,10 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 					functionStateJsonPaths: filterJsonPaths(jsonPaths, '/function/state/'),
 					functionScriptJsonPaths: filterJsonPaths(jsonPaths, '/function/script/'),
 					controlDefinitionJsonPaths: filterJsonPaths(jsonPaths, '/control/'),
-					hasRecipePipeline: getExistingFilePath(
-						domainName,
-						'interface',
-						'recipe',
-						familyPath,
-						'index.ts'
-					) !== null,
+					hasRecipePipeline:
+						getExistingFilePath(domainName, 'interface', 'recipe', familyPath, 'index.ts') !== null,
 					hasStatePipeline:
-						(getExistingFilePath(
-							domainName,
-							'function',
-							'state',
-							familyPath,
-							'index.svelte.ts'
-						) ??
+						(getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.svelte.ts') ??
 							getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.ts')) !==
 						null,
 					hasStoryPreview:

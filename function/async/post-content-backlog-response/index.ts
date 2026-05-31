@@ -20,7 +20,11 @@ export async function postContentBacklogResponse(event: RequestEvent) {
 		return json({ error: 'Invalid request payload.' }, { status: 400 });
 	}
 
-	if (payload.file.trim().length === 0 || payload.id.trim().length === 0 || payload.text.trim().length === 0) {
+	if (
+		payload.file.trim().length === 0 ||
+		payload.id.trim().length === 0 ||
+		payload.text.trim().length === 0
+	) {
 		return json({ error: 'Issue payload cannot be empty.' }, { status: 400 });
 	}
 

@@ -69,13 +69,30 @@ export class TypeScanner {
 	}
 
 	extractTypeKeys(content: string, pos: number): string[] {
-		let depth = 0, end = -1, inStr = false, strCh = '';
+		let depth = 0,
+			end = -1,
+			inStr = false,
+			strCh = '';
 		for (let i = pos; i < content.length; i++) {
 			const c = content[i];
-			if (inStr) { if (c === '\\') { i++; continue; } if (c === strCh) inStr = false; continue; }
-			if (c === '"' || c === "'" || c === '`') { inStr = true; strCh = c; }
-			else if (c === '{') depth++;
-			else if (c === '}') { if (--depth === 0) { end = i; break; } }
+			if (inStr) {
+				if (c === '\\') {
+					i++;
+					continue;
+				}
+				if (c === strCh) inStr = false;
+				continue;
+			}
+			if (c === '"' || c === "'" || c === '`') {
+				inStr = true;
+				strCh = c;
+			} else if (c === '{') depth++;
+			else if (c === '}') {
+				if (--depth === 0) {
+					end = i;
+					break;
+				}
+			}
 		}
 		if (end === -1) return [];
 		const body = content.slice(pos + 1, end);
