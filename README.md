@@ -1,1 +1,1 @@
-# stylist-svelte-docs
+# stylist-svelte-server

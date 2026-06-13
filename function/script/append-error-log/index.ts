@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ErrorLogEntry, ErrorLogPayload } from '$stylist/development/type/struct';
+import type { ErrorLogEntry } from '$stylist/development/type/struct/error-log-entry';
+import type { ErrorLogPayload } from '$stylist/development/type/struct/error-log-payload';
 import { getErrorLogFilePath } from '$stylist/server/function/script/get-error-log-file-path';
 
 export function appendErrorLog(payload: {
