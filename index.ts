@@ -64,7 +64,10 @@ export {
 	writeLibTextFile,
 	writeWorkspaceTextFile
 } from './function';
-export type { SerializablePrimitive, SerializableValue } from './class';
+export type {
+	SerializablePrimitive,
+	SerializableValue
+} from './class';
 export type {
 	TypeApiEndpoint,
 	TypeBacklogDocument,

@@ -6,4 +6,7 @@ export {
 	InterfaceScanner,
 	TypeScanner
 } from './manager';
-export type { SerializablePrimitive, SerializableValue } from './manager';
+export type {
+	SerializablePrimitive,
+	SerializableValue
+} from './manager';
