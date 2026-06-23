@@ -1,12 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ErrorLogEntry } from '$stylist/development/type/struct/error-log-entry';
-import type { ErrorLogPayload } from '$stylist/development/type/struct/error-log-payload';
+import type { ErrorLog } from '$stylist/server/type/object/error-log';
 import { getErrorLogFilePath } from '$stylist/server/function/script/get-error-log-file-path';
 
 export function appendErrorLog(payload: {
 	timestamp: string;
-	source: ErrorLogEntry['source'];
+	source: ErrorLog['source'];
 	routeId: string | null;
 	url: string;
 	method: string;
@@ -14,9 +13,9 @@ export function appendErrorLog(payload: {
 	stack: string | null;
 	name: string | null;
 	status: number;
-	details: ErrorLogPayload['details'];
+	details?: unknown;
 }): void {
-	const entry: ErrorLogEntry = {
+	const entry: ErrorLog = {
 		timestamp: payload.timestamp,
 		source: payload.source,
 		routeId: payload.routeId,

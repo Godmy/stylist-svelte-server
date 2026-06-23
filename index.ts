@@ -69,6 +69,7 @@ export type {
 	SerializableValue
 } from './class';
 export type {
+	ErrorLog,
 	TypeApiEndpoint,
 	TypeBacklogDocument,
 	TypeBacklogSource,
