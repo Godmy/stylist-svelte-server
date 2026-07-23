@@ -81,6 +81,24 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 				const familyPath = entry.name;
 				const entityPath = `${domainName}/component/${jointName}/${familyPath}`;
 
+				const recipeTypePath = getExistingFilePath(
+					domainName,
+					'interface',
+					'recipe',
+					familyPath,
+					'index.ts'
+				);
+				const stateFunctionPath =
+					getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.svelte.ts') ??
+					getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.ts');
+				const storyModulePath = getExistingFilePath(
+					domainName,
+					'component',
+					jointName,
+					familyPath,
+					'index.story.svelte'
+				);
+
 				descriptors.push({
 					entityPath,
 					domain: domainName,
@@ -94,16 +112,8 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 						familyPath,
 						'index.svelte'
 					),
-					recipeTypePath: getExistingFilePath(
-						domainName,
-						'interface',
-						'recipe',
-						familyPath,
-						'index.ts'
-					),
-					stateFunctionPath:
-						getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.svelte.ts') ??
-						getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.ts'),
+					recipeTypePath,
+					stateFunctionPath,
 					jsonPaths,
 					contractPaths: [
 						getExistingFilePath(domainName, 'interface', 'contract', familyPath, 'index.ts')
@@ -114,27 +124,10 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 					functionStateJsonPaths: filterJsonPaths(jsonPaths, '/function/state/'),
 					functionScriptJsonPaths: filterJsonPaths(jsonPaths, '/function/script/'),
 					controlDefinitionJsonPaths: filterJsonPaths(jsonPaths, '/control/'),
-					hasRecipePipeline:
-						getExistingFilePath(domainName, 'interface', 'recipe', familyPath, 'index.ts') !== null,
-					hasStatePipeline:
-						(getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.svelte.ts') ??
-							getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.ts')) !==
-						null,
-					hasStoryPreview:
-						getExistingFilePath(
-							domainName,
-							'component',
-							jointName,
-							familyPath,
-							'index.story.svelte'
-						) !== null,
-					storyModulePath: getExistingFilePath(
-						domainName,
-						'component',
-						jointName,
-						familyPath,
-						'index.story.svelte'
-					)
+					hasRecipePipeline: recipeTypePath !== null,
+					hasStatePipeline: stateFunctionPath !== null,
+					hasStoryPreview: storyModulePath !== null,
+					storyModulePath
 				});
 			}
 		}
@@ -142,3 +135,5 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 
 	return descriptors.sort((left, right) => left.entityPath.localeCompare(right.entityPath));
 }
+
+

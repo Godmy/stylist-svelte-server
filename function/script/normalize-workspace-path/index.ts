@@ -12,3 +12,5 @@ export function normalizeWorkspacePath(inputPath: string): string | null {
 
 	return absolutePath;
 }
+
+
