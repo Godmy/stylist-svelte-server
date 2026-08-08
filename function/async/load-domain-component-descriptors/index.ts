@@ -4,7 +4,7 @@ import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-pa
 import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/struct/domain-component-descriptor';
 
 export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[] {
-	type ComponentJoint = 'atom' | 'molecule' | 'organism';
+	type ComponentJoint = 'atom' | 'molecule' | 'organism' | 'template' | 'page';
 
 	function toRelativePath(absolutePath: string): string {
 		return path.relative(LIB_DIRECTORY_PATH, absolutePath).replace(/\\/g, '/');
@@ -66,7 +66,7 @@ export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[
 			continue;
 		}
 
-		for (const jointName of ['atom', 'molecule', 'organism'] as const) {
+		for (const jointName of ['atom', 'molecule', 'organism', 'template'] as const) {
 			const jointPath = path.join(componentRootPath, jointName);
 
 			if (!fs.existsSync(jointPath) || !fs.statSync(jointPath).isDirectory()) {
