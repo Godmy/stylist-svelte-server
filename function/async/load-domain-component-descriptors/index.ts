@@ -4,7 +4,7 @@ import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-pa
 import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/struct/domain-component-descriptor';
 
 export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[] {
-	type ComponentJoint = 'atom' | 'molecule' | 'organism' | 'template' | 'page';
+	type ComponentJoint = 'atom' | 'molecule' | 'organism' | 'template';
 
 	function toRelativePath(absolutePath: string): string {
 		return path.relative(LIB_DIRECTORY_PATH, absolutePath).replace(/\\/g, '/');
