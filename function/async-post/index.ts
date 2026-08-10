@@ -4,3 +4,4 @@ export { postBacklogResponse } from './backlog-response';
 export { postBuilderResponse } from './builder-response';
 export { postContentResponse } from './content-response';
 export { postIssuesResponse } from './issues-response';
+export { postTemplateExportResponse } from './template-export-response';

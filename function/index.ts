@@ -2,11 +2,16 @@
 export {
 	getBuilderLayoutResponse,
 	getContentFileResponse,
+	getDashboardAuditTreeResponse,
+	getDashboardErrorsLatestResponse,
+	getDashboardIndexationLatestResponse,
+	getDashboardReportsLatestResponse,
 	getDomainComponentProjectionResponse,
 	loadDomainComponentDescriptors,
 	loadDomainPageData,
 	postBuilderLayoutResponse,
-	postContentBacklogResponse
+	postContentBacklogResponse,
+	postTemplateExportFileResponse
 } from './async';
 export {
 	getBacklogResponse,
@@ -21,7 +26,8 @@ export {
 	postBacklogResponse,
 	postBuilderResponse,
 	postContentResponse,
-	postIssuesResponse
+	postIssuesResponse,
+	postTemplateExportResponse
 } from './async-post';
 export {
 	appendErrorLog,
@@ -30,6 +36,7 @@ export {
 	createWorkspaceDirectory,
 	createWorkspaceTextFile,
 	deleteWorkspacePath,
+	findLatestStylistOutputDirectory,
 	formatBackupTimestamp,
 	formatJsonlSegment,
 	getBacklogHistoryWorkspacePath,
@@ -42,14 +49,21 @@ export {
 	getWorkspacePathInfo,
 	isIssueMessage,
 	isSafeSegment,
+	listStylistOutputFiles,
 	listWorkspaceDirectory,
 	moveWorkspacePath,
 	normalizeLibPath,
+	normalizeRepoRelativePath,
 	normalizeWorkspacePath,
 	readLibTextFile,
+	readStylistDiOutput,
+	readStylistIndexationOutput,
+	readStylistOutputJsonFile,
+	readStylistOutputMarkdownFile,
 	readWorkspaceJsonl,
 	readWorkspaceTextFile,
 	workspacePathExists,
 	writeLibTextFile,
 	writeWorkspaceTextFile
 } from './script';
+export { buildTemplateLayoutSource } from './transform';
