@@ -1,12 +1,5 @@
 /** AREA: STYLIST CODER MODEL -> AUTO-GENERATED */
 export {
-	ClassScanner,
-	ConstScanner,
-	FunctionScanner,
-	InterfaceScanner,
-	TypeScanner
-} from './class';
-export {
 	BACKLOG_DEFAULT_JSON_PATH,
 	BACKLOG_HISTORY_DIRECTORY_PATH,
 	BACKLOG_JSONL_DIRECTORY_PATH,
@@ -20,10 +13,7 @@ export {
 	appendErrorLog,
 	appendWorkspaceJsonl,
 	buildTemplateLayoutSource,
-	copyWorkspacePath,
 	createWorkspaceDirectory,
-	createWorkspaceTextFile,
-	deleteWorkspacePath,
 	findLatestStylistOutputDirectory,
 	formatBackupTimestamp,
 	formatJsonlSegment,
@@ -47,14 +37,11 @@ export {
 	getIssueBacklogWorkspacePath,
 	getIssueMessageKey,
 	getIssuesResponse,
-	getWorkspacePathInfo,
 	isIssueMessage,
 	isSafeSegment,
 	listStylistOutputFiles,
-	listWorkspaceDirectory,
 	loadDomainComponentDescriptors,
 	loadDomainPageData,
-	moveWorkspacePath,
 	normalizeLibPath,
 	normalizeRepoRelativePath,
 	normalizeWorkspacePath,
@@ -79,13 +66,7 @@ export {
 	writeWorkspaceTextFile
 } from './function';
 export type {
-	SerializablePrimitive,
-	SerializableValue
-} from './class';
-export type {
 	ErrorLog,
-	TypeApiEndpoint,
 	TypeBacklogDocument,
-	TypeBacklogSource,
 	TypeIssueMessage
 } from './type';

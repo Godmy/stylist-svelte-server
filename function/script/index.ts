@@ -1,10 +1,7 @@
 /** AREA: STYLIST CODER MODEL -> AUTO-GENERATED */
 export { appendErrorLog } from './append-error-log';
 export { appendWorkspaceJsonl } from './append-workspace-jsonl';
-export { copyWorkspacePath } from './copy-workspace-path';
 export { createWorkspaceDirectory } from './create-workspace-directory';
-export { createWorkspaceTextFile } from './create-workspace-text-file';
-export { deleteWorkspacePath } from './delete-workspace-path';
 export { findLatestStylistOutputDirectory } from './find-latest-stylist-output-directory';
 export { formatBackupTimestamp } from './format-backup-timestamp';
 export { formatJsonlSegment } from './format-jsonl-segment';
@@ -15,12 +12,9 @@ export { getErrorLogFilePath } from './get-error-log-file-path';
 export { getIssueBacklogRelativePath } from './get-issue-backlog-relative-path';
 export { getIssueBacklogWorkspacePath } from './get-issue-backlog-workspace-path';
 export { getIssueMessageKey } from './get-issue-message-key';
-export { getWorkspacePathInfo } from './get-workspace-path-info';
 export { isIssueMessage } from './is-issue-message';
 export { isSafeSegment } from './is-safe-segment';
 export { listStylistOutputFiles } from './list-stylist-output-files';
-export { listWorkspaceDirectory } from './list-workspace-directory';
-export { moveWorkspacePath } from './move-workspace-path';
 export { normalizeLibPath } from './normalize-lib-path';
 export { normalizeRepoRelativePath } from './normalize-repo-relative-path';
 export { normalizeWorkspacePath } from './normalize-workspace-path';

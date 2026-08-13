@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadDomainComponentDescriptors } from '$stylist/server/function/async/load-domain-component-descriptors';
 import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-path';
-import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/struct/domain-component-descriptor';
+import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/object/domain-component-descriptor';
 
 export function loadDomainPageData(): {
 	tree: Array<{

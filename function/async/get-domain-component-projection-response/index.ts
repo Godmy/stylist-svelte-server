@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { loadDomainComponentDescriptors } from '$stylist/server/function/async/load-domain-component-descriptors/index';
 import { readLibTextFile } from '$stylist/server/function/script/read-lib-text-file/index';
-import type { TypeDomainComponentProjection } from '$stylist/domain/type/struct/domain-component-projection';
+import type { TypeDomainComponentProjection } from '$stylist/domain/type/object/domain-component-projection';
 
 function readJsonFile(path: string): unknown | null {
 	try {

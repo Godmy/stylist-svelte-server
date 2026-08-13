@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-path';
-import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/struct/domain-component-descriptor';
+import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/object/domain-component-descriptor';
 
 export function loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[] {
 	type ComponentJoint = 'atom' | 'molecule' | 'organism' | 'template';
