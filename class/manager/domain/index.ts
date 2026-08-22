@@ -221,9 +221,9 @@ export class DomainManager {
 			return json({ error: 'Missing entityPath.' }, { status: 400 });
 		}
 
-		const descriptor = this
-			.loadDomainComponentDescriptors()
-			.find((candidate) => candidate.entityPath === entityPath);
+		const descriptor = this.loadDomainComponentDescriptors().find(
+			(candidate) => candidate.entityPath === entityPath
+		);
 
 		if (!descriptor) {
 			return json({ error: 'Descriptor not found.' }, { status: 404 });
@@ -449,7 +449,9 @@ export class DomainManager {
 				.filter((entry) => entry.isFile())
 				.map((entry) => ({
 					name: entry.name,
-					path: path.relative(LIB_DIRECTORY_PATH, path.join(entityPath, entry.name)).replace(/\\/g, '/')
+					path: path
+						.relative(LIB_DIRECTORY_PATH, path.join(entityPath, entry.name))
+						.replace(/\\/g, '/')
 				}))
 				.sort((left, right) => left.name.localeCompare(right.name));
 
@@ -631,7 +633,8 @@ export class DomainManager {
 					continue;
 				}
 
-				const baseIdentifier = toPascalCase(familySegmentFromPath(instance.componentPath)) || 'Component';
+				const baseIdentifier =
+					toPascalCase(familySegmentFromPath(instance.componentPath)) || 'Component';
 				let identifier = baseIdentifier;
 				let suffix = 2;
 				while (usedIdentifiers.has(identifier)) {
@@ -663,7 +666,9 @@ export class DomainManager {
 		const instanceById = new Map(input.instances.map((instance) => [instance.id, instance]));
 		const importLines = [...importsByPath.values()]
 			.sort((left, right) => left.identifier.localeCompare(right.identifier))
-			.map((entry) => `\timport ${entry.identifier} from '${toImportSpecifier(entry.componentPath)}';`)
+			.map(
+				(entry) => `\timport ${entry.identifier} from '${toImportSpecifier(entry.componentPath)}';`
+			)
 			.join('\n');
 		const sectionsMarkup = input.sections
 			.map((section) => {

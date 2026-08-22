@@ -16,8 +16,4 @@ export {
 	ISSUES_JSONL_PATH,
 	LIB_DIRECTORY_PATH
 } from './const';
-export type {
-	ErrorLog,
-	TypeBacklogDocument,
-	TypeIssueMessage
-} from './type';
+export type { ErrorLog, TypeBacklogDocument, TypeIssueMessage } from './type';

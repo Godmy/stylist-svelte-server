@@ -279,7 +279,9 @@ export class DiagnosticManager {
 			dependencies[0]?.key ??
 			'';
 		const sourceByKey = selectedDependencyKey
-			? this.readDependencyJsonFile<Record<string, DependencySourceEntry>>('step-1-files-by-key.json')
+			? this.readDependencyJsonFile<Record<string, DependencySourceEntry>>(
+					'step-1-files-by-key.json'
+				)
 			: null;
 		const selectedDependencyFiles =
 			sourceByKey?.[selectedDependencyKey]?.files?.map((file) => ({

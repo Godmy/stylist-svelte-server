@@ -107,11 +107,18 @@ export class DashboardManager {
 				tool: 'indexation',
 				title: 'Indexation',
 				status: fs.existsSync(indexation.outputPath) ? 'success' : 'unknown',
-				updatedAt: indexation.files.map((file) => file.updatedAt).sort().at(-1),
+				updatedAt: indexation.files
+					.map((file) => file.updatedAt)
+					.sort()
+					.at(-1),
 				outputPath: indexation.outputRelativePath,
-				readmePath: FileManager.normalizeRepoRelativePath(path.join(indexation.outputPath, 'result.md')),
+				readmePath: FileManager.normalizeRepoRelativePath(
+					path.join(indexation.outputPath, 'result.md')
+				),
 				jsonPaths: [
-					FileManager.normalizeRepoRelativePath(path.join(indexation.outputPath, 'stylist-svelte.json')),
+					FileManager.normalizeRepoRelativePath(
+						path.join(indexation.outputPath, 'stylist-svelte.json')
+					),
 					FileManager.normalizeRepoRelativePath(
 						path.join(indexation.outputPath, 'stylist-svelte-components.json')
 					)
@@ -126,7 +133,10 @@ export class DashboardManager {
 				tool: 'di',
 				title: 'Dependency Injection',
 				status: fs.existsSync(di.outputPath) ? 'success' : 'unknown',
-				updatedAt: di.files.map((file) => file.updatedAt).sort().at(-1),
+				updatedAt: di.files
+					.map((file) => file.updatedAt)
+					.sort()
+					.at(-1),
 				outputPath: di.outputRelativePath,
 				readmePath: undefined,
 				jsonPaths: [di.dependencyTreePath, di.filesByKeyPath, di.crossdomainLinksPath].filter(
@@ -174,7 +184,11 @@ export class DashboardManager {
 			files?: string[];
 		} | null;
 		const componentMap = indexation.componentMap;
-		const updatedAt = files.map((file) => file.updatedAt).sort().at(-1) ?? null;
+		const updatedAt =
+			files
+				.map((file) => file.updatedAt)
+				.sort()
+				.at(-1) ?? null;
 		const summarizeNode = (
 			node: { name?: string; path?: string; children?: unknown[]; files?: string[] } | null,
 			depth = 0
@@ -186,19 +200,17 @@ export class DashboardManager {
 			children:
 				depth >= 2
 					? []
-					: (node?.children ?? [])
-							.slice(0, 50)
-							.map((child) =>
-								summarizeNode(
-									child as {
-										name?: string;
-										path?: string;
-										children?: unknown[];
-										files?: string[];
-									},
-									depth + 1
-								)
+					: (node?.children ?? []).slice(0, 50).map((child) =>
+							summarizeNode(
+								child as {
+									name?: string;
+									path?: string;
+									children?: unknown[];
+									files?: string[];
+								},
+								depth + 1
 							)
+						)
 		});
 
 		return json({
@@ -225,7 +237,9 @@ export class DashboardManager {
 				status: files.length > 0 ? 'success' : 'unknown',
 				updatedAt,
 				resultPath: FileManager.normalizeRepoRelativePath(path.join(outputPath, 'result.md')),
-				treePath: FileManager.normalizeRepoRelativePath(path.join(outputPath, 'stylist-svelte.json')),
+				treePath: FileManager.normalizeRepoRelativePath(
+					path.join(outputPath, 'stylist-svelte.json')
+				),
 				componentMapPath: FileManager.normalizeRepoRelativePath(
 					path.join(outputPath, 'stylist-svelte-components.json')
 				),
@@ -282,7 +296,8 @@ export class DashboardManager {
 						: 'unknown',
 				line: error.line,
 				column: error.column,
-				severity: error.severity === 'warning' || error.severity === 'info' ? error.severity : 'error',
+				severity:
+					error.severity === 'warning' || error.severity === 'info' ? error.severity : 'error',
 				code: error.code,
 				message: error.message ?? '',
 				runId: latest.runId
@@ -326,7 +341,9 @@ export class DashboardManager {
 						: 'success',
 				updatedAt: latest.updatedAt,
 				outputPath: latest.path,
-				readmePath: FileManager.normalizeRepoRelativePath(path.join(latest.absolutePath, 'README.md')),
+				readmePath: FileManager.normalizeRepoRelativePath(
+					path.join(latest.absolutePath, 'README.md')
+				),
 				jsonPaths: jsonFiles.map((file) => file.path),
 				errorCount: Math.max(
 					items.length,
@@ -592,7 +609,9 @@ export class DashboardManager {
 				status: root.errorCount > 0 ? 'failed' : root.warningCount > 0 ? 'warning' : 'success',
 				updatedAt: consolidated.timestamp ?? latest.updatedAt,
 				outputPath: latest.path,
-				readmePath: FileManager.normalizeRepoRelativePath(path.join(latest.absolutePath, 'README.md')),
+				readmePath: FileManager.normalizeRepoRelativePath(
+					path.join(latest.absolutePath, 'README.md')
+				),
 				jsonPaths: [
 					FileManager.normalizeRepoRelativePath(
 						path.join(latest.absolutePath, 'json', 'consolidated.json')
