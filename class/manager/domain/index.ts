@@ -1,38 +1,63 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { CONTENT_PREVIEW_MAX_FILE_SIZE } from '$stylist/server/const/value/content-preview-max-file-size';
-import { LIB_DIRECTORY_PATH } from '$stylist/server/const/value/lib-directory-path';
-import { FileManager } from '$stylist/server/class/manager/file';
+import manifest from '$stylist/domain/data/json/domain-page-manifest/index.json';
 import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/object/domain-component-descriptor';
 import type { TypeDomainComponentProjection } from '$stylist/domain/type/object/domain-component-projection';
+import type { TypeDomainTreeNode } from '$stylist/domain/type/object/domain-tree-node';
+
+type TypeDomainPageData = {
+	tree: TypeDomainTreeNode[];
+	descriptors: TypeDomainComponentDescriptor[];
+};
+
+const LIB_SOURCE_MOUNT_PATH = '/generated/lib-source';
+
+function normalizeRelativeLibPath(inputPath: string): string | null {
+	const segments = inputPath
+		.replace(/\\/g, '/')
+		.split('/')
+		.filter((segment) => segment.length > 0);
+
+	if (segments.some((segment) => segment === '..' || segment === '.')) {
+		return null;
+	}
+
+	return segments.length > 0 ? segments.join('/') : null;
+}
+
+function toLibSourceAssetUrl(relativeLibPath: string): string {
+	const encodedSegments = relativeLibPath.split('/').map(encodeURIComponent);
+	return `${LIB_SOURCE_MOUNT_PATH}/${encodedSegments.join('/')}`;
+}
 
 export class DomainManager {
-	static getContentFileResponse(event: RequestEvent): Response {
+	static async getContentFileResponse(event: RequestEvent): Promise<Response> {
 		const requestedPath = event.url.searchParams.get('path');
 
 		if (!requestedPath) {
 			return json({ error: 'Missing "path" query parameter.' }, { status: 400 });
 		}
 
-		const absolutePath = FileManager.normalizeLibPath(requestedPath);
+		const relativeLibPath = normalizeRelativeLibPath(requestedPath);
 
-		if (!absolutePath) {
+		if (!relativeLibPath) {
 			return json({ error: 'Path is outside src/lib.' }, { status: 400 });
 		}
 
-		if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+		const content = await this.readLibTextFile(event, relativeLibPath);
+
+		if (content === null) {
 			return json({ error: 'File not found.' }, { status: 404 });
 		}
 
-		if (fs.statSync(absolutePath).size > CONTENT_PREVIEW_MAX_FILE_SIZE) {
+		if (new TextEncoder().encode(content).length > CONTENT_PREVIEW_MAX_FILE_SIZE) {
 			return json({ error: 'File is too large to preview.' }, { status: 413 });
 		}
 
-		return json({ content: fs.readFileSync(absolutePath, 'utf8') });
+		return json({ content });
 	}
 
-	static getDomainComponentProjectionResponse(event: RequestEvent): Response {
+	static async getDomainComponentProjectionResponse(event: RequestEvent): Promise<Response> {
 		const entityPath = event.url.searchParams.get('entityPath');
 
 		if (!entityPath) {
@@ -47,6 +72,25 @@ export class DomainManager {
 			return json({ error: 'Descriptor not found.' }, { status: 404 });
 		}
 
+		const readJsonFiles = async (paths: string[]): Promise<unknown[]> => {
+			const values = await Promise.all(paths.map((filePath) => this.readLibJsonFile(event, filePath)));
+			return values.filter((value): value is unknown => value !== null);
+		};
+
+		const [recipeJson, enumJson, mapJson, stateJson, controlJson, contractFiles] = await Promise.all([
+			readJsonFiles(descriptor.interfaceRecipeJsonPaths),
+			readJsonFiles(descriptor.constEnumJsonPaths),
+			readJsonFiles(descriptor.constMapJsonPaths),
+			readJsonFiles(descriptor.functionStateJsonPaths),
+			readJsonFiles(descriptor.controlDefinitionJsonPaths),
+			Promise.all(
+				descriptor.contractPaths.map(async (filePath) => ({
+					path: filePath,
+					content: await this.readLibTextFile(event, filePath)
+				}))
+			)
+		]);
+
 		const projection: TypeDomainComponentProjection = {
 			entityPath: descriptor.entityPath,
 			architecture: {
@@ -55,377 +99,58 @@ export class DomainManager {
 				stateFunctionPath: descriptor.stateFunctionPath,
 				contractPaths: descriptor.contractPaths
 			},
-			information: {
-				recipeJson: descriptor.interfaceRecipeJsonPaths
-					.map((filePath) => this.readLibJsonFile(filePath))
-					.filter((value): value is unknown => value !== null),
-				enumJson: descriptor.constEnumJsonPaths
-					.map((filePath) => this.readLibJsonFile(filePath))
-					.filter((value): value is unknown => value !== null),
-				mapJson: descriptor.constMapJsonPaths
-					.map((filePath) => this.readLibJsonFile(filePath))
-					.filter((value): value is unknown => value !== null)
-			},
+			information: { recipeJson, enumJson, mapJson },
 			interaction: {
-				stateJson: descriptor.functionStateJsonPaths
-					.map((filePath) => this.readLibJsonFile(filePath))
-					.filter((value): value is unknown => value !== null),
+				stateJson,
 				storyModulePath: descriptor.storyModulePath,
 				hasStatePipeline: descriptor.hasStatePipeline
 			},
-			controls: {
-				controlJson: descriptor.controlDefinitionJsonPaths
-					.map((filePath) => this.readLibJsonFile(filePath))
-					.filter((value): value is unknown => value !== null)
-			},
-			contracts: {
-				files: descriptor.contractPaths.map((filePath) => ({
-					path: filePath,
-					content: this.readLibTextFile(filePath)
-				}))
-			}
+			controls: { controlJson },
+			contracts: { files: contractFiles }
 		};
 
 		return json(projection);
 	}
 
-	static getDomainPageData() {
-		return this.loadDomainPageData();
-	}
-
-	static loadDomainPageData(): {
-		tree: Array<{
-			name: string;
-			clusters: Array<{
-				name: string;
-				joints: Array<{
-					name: string;
-					entities: Array<{
-						name: string;
-						path: string;
-						files: Array<{
-							name: string;
-							path: string;
-						}>;
-					}>;
-				}>;
-			}>;
-		}>;
-		descriptors: TypeDomainComponentDescriptor[];
-	} {
-		type DomainFile = {
-			name: string;
-			path: string;
-		};
-
-		type DomainEntity = {
-			name: string;
-			path: string;
-			files: DomainFile[];
-		};
-
-		type DomainJoint = {
-			name: string;
-			entities: DomainEntity[];
-		};
-
-		type DomainCluster = {
-			name: string;
-			joints: DomainJoint[];
-		};
-
-		type DomainTreeNode = {
-			name: string;
-			clusters: DomainCluster[];
-		};
-
-		const buildDomainNode = (domainName: string): DomainTreeNode | null => {
-			const domainPath = path.join(LIB_DIRECTORY_PATH, domainName);
-			const clusterNames = fs
-				.readdirSync(domainPath, { withFileTypes: true })
-				.filter((entry) => entry.isDirectory())
-				.map((entry) => entry.name)
-				.filter((name) => !name.startsWith('.'));
-
-			const clusters = clusterNames
-				.map((clusterName) => buildClusterNode(domainName, clusterName))
-				.filter((node): node is DomainCluster => node !== null);
-
-			if (clusters.length === 0) {
-				return null;
-			}
-
-			return { name: domainName, clusters };
-		};
-
-		const buildClusterNode = (domainName: string, clusterName: string): DomainCluster | null => {
-			const clusterPath = path.join(LIB_DIRECTORY_PATH, domainName, clusterName);
-			const jointNames = fs
-				.readdirSync(clusterPath, { withFileTypes: true })
-				.filter((entry) => entry.isDirectory())
-				.map((entry) => entry.name);
-
-			const joints = jointNames
-				.map((jointName) => buildJointNode(domainName, clusterName, jointName))
-				.filter((node): node is DomainJoint => node !== null);
-
-			if (joints.length === 0) {
-				return null;
-			}
-
-			return { name: clusterName, joints };
-		};
-
-		const buildJointNode = (
-			domainName: string,
-			clusterName: string,
-			jointName: string
-		): DomainJoint | null => {
-			const jointPath = path.join(LIB_DIRECTORY_PATH, domainName, clusterName, jointName);
-			const entities = collectEntities(domainName, clusterName, jointName, jointPath);
-
-			if (entities.length === 0) {
-				return null;
-			}
-
-			return { name: jointName, entities };
-		};
-
-		const collectEntities = (
-			domainName: string,
-			clusterName: string,
-			jointName: string,
-			jointPath: string
-		): DomainEntity[] => {
-			const entities: DomainEntity[] = [];
-
-			for (const entry of fs.readdirSync(jointPath, { withFileTypes: true })) {
-				if (!entry.isDirectory()) {
-					continue;
-				}
-
-				const entityPath = path.join(jointPath, entry.name);
-				const files = collectEntityFiles(entityPath);
-
-				if (files.length > 0) {
-					entities.push({
-						name: entry.name,
-						path: `${domainName}/${clusterName}/${jointName}/${entry.name}`,
-						files
-					});
-					continue;
-				}
-
-				for (const nestedEntity of collectNestedEntities(
-					domainName,
-					clusterName,
-					jointName,
-					entry.name,
-					entityPath
-				)) {
-					entities.push(nestedEntity);
-				}
-			}
-
-			return entities.sort((left, right) => left.name.localeCompare(right.name));
-		};
-
-		const collectNestedEntities = (
-			domainName: string,
-			clusterName: string,
-			jointName: string,
-			parentName: string,
-			parentPath: string
-		): DomainEntity[] => {
-			const entities: DomainEntity[] = [];
-
-			for (const entry of fs.readdirSync(parentPath, { withFileTypes: true })) {
-				if (!entry.isDirectory()) {
-					continue;
-				}
-
-				const entityPath = path.join(parentPath, entry.name);
-				const files = collectEntityFiles(entityPath);
-
-				if (files.length === 0) {
-					continue;
-				}
-
-				entities.push({
-					name: `${parentName}/${entry.name}`,
-					path: `${domainName}/${clusterName}/${jointName}/${parentName}/${entry.name}`,
-					files
-				});
-			}
-
-			return entities.sort((left, right) => left.name.localeCompare(right.name));
-		};
-
-		const collectEntityFiles = (entityPath: string): DomainFile[] =>
-			fs
-				.readdirSync(entityPath, { withFileTypes: true })
-				.filter((entry) => entry.isFile())
-				.map((entry) => ({
-					name: entry.name,
-					path: path
-						.relative(LIB_DIRECTORY_PATH, path.join(entityPath, entry.name))
-						.replace(/\\/g, '/')
-				}))
-				.sort((left, right) => left.name.localeCompare(right.name));
-
-		const tree = fs
-			.readdirSync(LIB_DIRECTORY_PATH, { withFileTypes: true })
-			.filter((entry) => entry.isDirectory())
-			.map((domainEntry) => buildDomainNode(domainEntry.name))
-			.filter((node): node is DomainTreeNode => node !== null)
-			.sort((left, right) => left.name.localeCompare(right.name));
-
-		return {
-			tree,
-			descriptors: this.loadDomainComponentDescriptors()
-		};
+	static getDomainPageData(): TypeDomainPageData {
+		return manifest as TypeDomainPageData;
 	}
 
 	static loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[] {
-		type ComponentJoint = 'atom' | 'molecule' | 'organism' | 'template';
-
-		const toRelativePath = (absolutePath: string): string =>
-			path.relative(LIB_DIRECTORY_PATH, absolutePath).replace(/\\/g, '/');
-
-		const resolveLibPath = (...segments: string[]): string =>
-			path.join(LIB_DIRECTORY_PATH, ...segments);
-
-		const getExistingFilePath = (...segments: string[]): string | null => {
-			const absolutePath = resolveLibPath(...segments);
-			return fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()
-				? toRelativePath(absolutePath)
-				: null;
-		};
-
-		const collectJsonPaths = (domainName: string): string[] => {
-			const jsonRootPath = resolveLibPath(domainName, 'data', 'json');
-
-			if (!fs.existsSync(jsonRootPath) || !fs.statSync(jsonRootPath).isDirectory()) {
-				return [];
-			}
-
-			const jsonPaths: string[] = [];
-
-			function walk(directoryPath: string): void {
-				for (const entry of fs.readdirSync(directoryPath, { withFileTypes: true })) {
-					const entryPath = path.join(directoryPath, entry.name);
-					if (entry.isDirectory()) {
-						walk(entryPath);
-						continue;
-					}
-					if (entry.isFile() && entry.name.endsWith('.json')) {
-						jsonPaths.push(toRelativePath(entryPath));
-					}
-				}
-			}
-
-			walk(jsonRootPath);
-			return jsonPaths.sort((left, right) => left.localeCompare(right));
-		};
-
-		const filterJsonPaths = (jsonPaths: string[], pattern: string): string[] =>
-			jsonPaths.filter((jsonPath) => jsonPath.includes(pattern));
-
-		const descriptors: TypeDomainComponentDescriptor[] = [];
-		const domainNames = fs
-			.readdirSync(LIB_DIRECTORY_PATH, { withFileTypes: true })
-			.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
-			.map((entry) => entry.name)
-			.sort((left, right) => left.localeCompare(right));
-
-		for (const domainName of domainNames) {
-			const jsonPaths = collectJsonPaths(domainName);
-			const componentRootPath = resolveLibPath(domainName, 'component');
-
-			if (!fs.existsSync(componentRootPath) || !fs.statSync(componentRootPath).isDirectory()) {
-				continue;
-			}
-
-			for (const jointName of ['atom', 'molecule', 'organism', 'template'] as const) {
-				const jointPath = path.join(componentRootPath, jointName);
-
-				if (!fs.existsSync(jointPath) || !fs.statSync(jointPath).isDirectory()) {
-					continue;
-				}
-
-				for (const entry of fs.readdirSync(jointPath, { withFileTypes: true })) {
-					if (!entry.isDirectory()) {
-						continue;
-					}
-
-					const familyPath = entry.name;
-					const entityPath = `${domainName}/component/${jointName}/${familyPath}`;
-					const recipeTypePath = getExistingFilePath(
-						domainName,
-						'interface',
-						'recipe',
-						familyPath,
-						'index.ts'
-					);
-					const stateFunctionPath =
-						getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.svelte.ts') ??
-						getExistingFilePath(domainName, 'function', 'state', familyPath, 'index.ts');
-					const storyModulePath = getExistingFilePath(
-						domainName,
-						'component',
-						jointName,
-						familyPath,
-						'index.story.svelte'
-					);
-
-					descriptors.push({
-						entityPath,
-						domain: domainName,
-						cluster: 'component',
-						joint: jointName as ComponentJoint,
-						family: familyPath,
-						componentModulePath: getExistingFilePath(
-							domainName,
-							'component',
-							jointName,
-							familyPath,
-							'index.svelte'
-						),
-						recipeTypePath,
-						stateFunctionPath,
-						jsonPaths,
-						contractPaths: [
-							getExistingFilePath(domainName, 'interface', 'contract', familyPath, 'index.ts')
-						].filter((value): value is string => value !== null),
-						interfaceRecipeJsonPaths: filterJsonPaths(jsonPaths, '/interface/recipe/'),
-						constEnumJsonPaths: filterJsonPaths(jsonPaths, '/const/enum/'),
-						constMapJsonPaths: filterJsonPaths(jsonPaths, '/const/map/'),
-						functionStateJsonPaths: filterJsonPaths(jsonPaths, '/function/state/'),
-						functionScriptJsonPaths: filterJsonPaths(jsonPaths, '/function/script/'),
-						controlDefinitionJsonPaths: filterJsonPaths(jsonPaths, '/control/'),
-						hasRecipePipeline: recipeTypePath !== null,
-						hasStatePipeline: stateFunctionPath !== null,
-						hasStoryPreview: storyModulePath !== null,
-						storyModulePath
-					});
-				}
-			}
-		}
-
-		return descriptors.sort((left, right) => left.entityPath.localeCompare(right.entityPath));
+		return manifest.descriptors as TypeDomainComponentDescriptor[];
 	}
 
-	private static readLibJsonFile(filePath: string): unknown | null {
+	private static async readLibJsonFile(event: RequestEvent, filePath: string): Promise<unknown | null> {
+		const text = await this.readLibTextFile(event, filePath);
+
+		if (text === null) {
+			return null;
+		}
+
 		try {
-			return JSON.parse(FileManager.readLibTextFile(filePath));
+			return JSON.parse(text);
 		} catch {
 			return null;
 		}
 	}
 
-	private static readLibTextFile(filePath: string): string | null {
+	private static async readLibTextFile(event: RequestEvent, filePath: string): Promise<string | null> {
+		const relativeLibPath = normalizeRelativeLibPath(filePath);
+
+		if (!relativeLibPath) {
+			return null;
+		}
+
+		const assetUrl = new URL(toLibSourceAssetUrl(relativeLibPath), event.url.origin);
+
 		try {
-			return FileManager.readLibTextFile(filePath);
+			// On Cloudflare, static assets live outside SvelteKit's own routing, so
+			// event.fetch() (which short-circuits same-origin requests internally)
+			// never reaches them — the Assets binding must be called directly.
+			const response = event.platform?.env?.ASSETS
+				? await event.platform.env.ASSETS.fetch(assetUrl)
+				: await event.fetch(assetUrl);
+			return response.ok ? await response.text() : null;
 		} catch {
 			return null;
 		}
