@@ -1,13 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { CONTENT_PREVIEW_MAX_FILE_SIZE } from '$stylist/server/const/value/content-preview-max-file-size';
 import manifest from '$stylist/domain/data/json/domain-page-manifest/index.json';
-import type { TypeDomainComponentDescriptor } from '$stylist/domain/type/object/domain-component-descriptor';
+import { resolveComponentDescriptor } from '$stylist/domain/function/resolve/component-descriptor';
 import type { TypeDomainComponentProjection } from '$stylist/domain/type/object/domain-component-projection';
-import type { TypeDomainTreeNode } from '$stylist/domain/type/object/domain-tree-node';
+import type { TypeDomainTree } from '$stylist/domain/type/object/domain-tree';
 
 type TypeDomainPageData = {
-	tree: TypeDomainTreeNode[];
-	descriptors: TypeDomainComponentDescriptor[];
+	tree: TypeDomainTree;
 };
 
 const LIB_SOURCE_MOUNT_PATH = '/generated/lib-source';
@@ -64,45 +63,46 @@ export class DomainManager {
 			return json({ error: 'Missing entityPath.' }, { status: 400 });
 		}
 
-		const descriptor = this.loadDomainComponentDescriptors().find(
-			(candidate) => candidate.entityPath === entityPath
-		);
+		const descriptor = resolveComponentDescriptor(this.getDomainPageData().tree, entityPath);
 
 		if (!descriptor) {
 			return json({ error: 'Descriptor not found.' }, { status: 404 });
 		}
 
-		const readJsonFiles = async (paths: string[]): Promise<unknown[]> => {
-			const values = await Promise.all(paths.map((filePath) => this.readLibJsonFile(event, filePath)));
+		const readJsonFiles = async (paths: string[] = []): Promise<unknown[]> => {
+			const values = await Promise.all(
+				paths.map((filePath) => this.readLibJsonFile(event, filePath))
+			);
 			return values.filter((value): value is unknown => value !== null);
 		};
 
-		const [recipeJson, enumJson, mapJson, stateJson, controlJson, contractFiles] = await Promise.all([
-			readJsonFiles(descriptor.interfaceRecipeJsonPaths),
-			readJsonFiles(descriptor.constEnumJsonPaths),
-			readJsonFiles(descriptor.constMapJsonPaths),
-			readJsonFiles(descriptor.functionStateJsonPaths),
-			readJsonFiles(descriptor.controlDefinitionJsonPaths),
-			Promise.all(
-				descriptor.contractPaths.map(async (filePath) => ({
-					path: filePath,
-					content: await this.readLibTextFile(event, filePath)
-				}))
-			)
-		]);
+		const [recipeJson, enumJson, mapJson, stateJson, controlJson, contractFiles] =
+			await Promise.all([
+				readJsonFiles(descriptor.interfaceRecipeJsonPaths),
+				readJsonFiles(descriptor.constEnumJsonPaths),
+				readJsonFiles(descriptor.constMapJsonPaths),
+				readJsonFiles(descriptor.functionStateJsonPaths),
+				readJsonFiles(descriptor.controlDefinitionJsonPaths),
+				Promise.all(
+					(descriptor.contractPaths ?? []).map(async (filePath) => ({
+						path: filePath,
+						content: await this.readLibTextFile(event, filePath)
+					}))
+				)
+			]);
 
 		const projection: TypeDomainComponentProjection = {
 			entityPath: descriptor.entityPath,
 			architecture: {
-				componentModulePath: descriptor.componentModulePath,
-				recipeTypePath: descriptor.recipeTypePath,
-				stateFunctionPath: descriptor.stateFunctionPath,
-				contractPaths: descriptor.contractPaths
+				componentModulePath: descriptor.componentModulePath ?? null,
+				recipeTypePath: descriptor.recipeTypePath ?? null,
+				stateFunctionPath: descriptor.stateFunctionPath ?? null,
+				contractPaths: descriptor.contractPaths ?? []
 			},
 			information: { recipeJson, enumJson, mapJson },
 			interaction: {
 				stateJson,
-				storyModulePath: descriptor.storyModulePath,
+				storyModulePath: descriptor.storyModulePath ?? null,
 				hasStatePipeline: descriptor.hasStatePipeline
 			},
 			controls: { controlJson },
@@ -113,14 +113,13 @@ export class DomainManager {
 	}
 
 	static getDomainPageData(): TypeDomainPageData {
-		return manifest as TypeDomainPageData;
+		return { tree: manifest.tree as TypeDomainTree };
 	}
 
-	static loadDomainComponentDescriptors(): TypeDomainComponentDescriptor[] {
-		return manifest.descriptors as TypeDomainComponentDescriptor[];
-	}
-
-	private static async readLibJsonFile(event: RequestEvent, filePath: string): Promise<unknown | null> {
+	private static async readLibJsonFile(
+		event: RequestEvent,
+		filePath: string
+	): Promise<unknown | null> {
 		const text = await this.readLibTextFile(event, filePath);
 
 		if (text === null) {
@@ -134,7 +133,10 @@ export class DomainManager {
 		}
 	}
 
-	private static async readLibTextFile(event: RequestEvent, filePath: string): Promise<string | null> {
+	private static async readLibTextFile(
+		event: RequestEvent,
+		filePath: string
+	): Promise<string | null> {
 		const relativeLibPath = normalizeRelativeLibPath(filePath);
 
 		if (!relativeLibPath) {
