@@ -38,7 +38,10 @@ export class DomainBuilderManager {
 			}
 		}
 
-		FileManager.writeWorkspaceTextFile(BUILDER_LAYOUT_LIB_PATH, `${JSON.stringify(payload, null, 2)}\n`);
+		FileManager.writeWorkspaceTextFile(
+			BUILDER_LAYOUT_LIB_PATH,
+			`${JSON.stringify(payload, null, 2)}\n`
+		);
 
 		return json({ ok: true });
 	}
@@ -165,7 +168,8 @@ export class DomainBuilderManager {
 					continue;
 				}
 
-				const baseIdentifier = toPascalCase(familySegmentFromPath(instance.componentPath)) || 'Component';
+				const baseIdentifier =
+					toPascalCase(familySegmentFromPath(instance.componentPath)) || 'Component';
 				let identifier = baseIdentifier;
 				let suffix = 2;
 				while (usedIdentifiers.has(identifier)) {
@@ -197,7 +201,9 @@ export class DomainBuilderManager {
 		const instanceById = new Map(input.instances.map((instance) => [instance.id, instance]));
 		const importLines = [...importsByPath.values()]
 			.sort((left, right) => left.identifier.localeCompare(right.identifier))
-			.map((entry) => `\timport ${entry.identifier} from '${toImportSpecifier(entry.componentPath)}';`)
+			.map(
+				(entry) => `\timport ${entry.identifier} from '${toImportSpecifier(entry.componentPath)}';`
+			)
 			.join('\n');
 		const sectionsMarkup = input.sections
 			.map((section) => {
