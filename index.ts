@@ -1,13 +1,27 @@
 /** AREA: STYLIST CODER MODEL -> AUTO-GENERATED */
 export {
+	AiChatManager,
+	BacklogManager,
 	DashboardManager,
 	DiagnosticManager,
+	DomainBuilderManager,
+	DomainContentBacklogManager,
 	DomainManager,
-	FileManager
+	FileManager,
+	TranscriptionManager
 } from './class';
 export {
+	BACKLOG_DEFAULT_JSON_PATH,
+	BACKLOG_HISTORY_DIRECTORY_PATH,
+	BACKLOG_JSONL_DIRECTORY_PATH,
+	BUILDER_LAYOUT_LIB_PATH,
 	CONTENT_PREVIEW_MAX_FILE_SIZE,
 	ERROR_LOG_FILE,
+	ISSUES_JSONL_PATH,
 	LIB_DIRECTORY_PATH
 } from './const';
-export type { ErrorLog } from './type';
+export type {
+	ErrorLog,
+	TypeBacklogDocument,
+	TypeIssueMessage
+} from './type';
